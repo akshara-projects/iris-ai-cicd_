@@ -1,4 +1,4 @@
-rom flask import Flask, request, jsonify
+from flask import Flask, request, jsonify
 from sklearn.datasets import load_iris
 from sklearn.ensemble import RandomForestClassifier
 import psycopg2
