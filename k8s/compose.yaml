@@ -1,0 +1,68 @@
+services:
+
+  frontend:
+
+    build: ./frontend
+
+    container_name: iris-frontend
+
+    ports:
+      - "8080:80"
+
+    depends_on:
+      - backend
+
+
+  backend:
+
+    build: ./backend
+
+    container_name: iris-backend
+
+    environment:
+
+      DB_HOST: db
+
+      DB_NAME: irisdb
+
+      DB_USER: admin
+
+      DB_PASSWORD: admin123
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+
+  db:
+
+    image: postgres:16-alpine
+
+    container_name: iris-database
+
+    environment:
+
+      POSTGRES_DB: irisdb
+
+      POSTGRES_USER: admin
+
+      POSTGRES_PASSWORD: admin123
+
+    volumes:
+
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+
+      test: ["CMD-SHELL", "pg_isready -U admin -d irisdb"]
+
+      interval: 5s
+
+      timeout: 5s
+
+      retries: 5
+
+
+volumes:
+
+  postgres_data:

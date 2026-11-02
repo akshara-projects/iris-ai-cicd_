@@ -1,0 +1,202 @@
+# DATABASE STORAGE
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+
+# DATABASE DEPLOYMENT
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: db
+
+  template:
+    metadata:
+      labels:
+        app: db
+
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+
+          ports:
+            - containerPort: 5432
+
+          env:
+            - name: POSTGRES_DB
+              value: irisdb
+
+            - name: POSTGRES_USER
+              value: admin
+
+            - name: POSTGRES_PASSWORD
+              value: admin123
+
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U admin -d irisdb
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+
+---
+
+# DATABASE SERVICE
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+spec:
+  selector:
+    app: db
+
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+  type: ClusterIP
+
+---
+
+# BACKEND DEPLOYMENT
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+    metadata:
+      labels:
+        app: backend
+
+    spec:
+
+      initContainers:
+        - name: wait-for-database
+          image: postgres:16-alpine
+
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h db -p 5432 -U admin -d irisdb;
+              do
+                echo "Waiting for database..."
+                sleep 2
+              done
+
+      containers:
+        - name: backend
+          image: iris-backend:1.0
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 5000
+
+          env:
+            - name: DB_HOST
+              value: db
+
+            - name: DB_NAME
+              value: irisdb
+
+            - name: DB_USER
+              value: admin
+
+            - name: DB_PASSWORD
+              value: admin123
+
+---
+
+# BACKEND SERVICE
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:
+    app: backend
+
+  ports:
+    - port: 5000
+      targetPort: 5000
+
+  type: ClusterIP
+
+---
+
+# FRONTEND DEPLOYMENT
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+
+    spec:
+      containers:
+        - name: frontend
+          image: iris-frontend:1.0
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 80
+
+---
+
+# FRONTEND SERVICE
+apiVersion: v1
+kind: Service
+metadata:
+  name: iris-frontend
+spec:
+  selector:
+    app: frontend
+
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080
+
+  type: NodePort

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Iris AI Predictor</title>
+
+    <style>
+
+        body {
+            font-family: Arial;
+            background: #f1f5f9;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            max-width: 450px;
+            margin: auto;
+            border-radius: 12px;
+        }
+
+        input {
+            width: 90%;
+            padding: 10px;
+            margin: 8px;
+        }
+
+        button {
+            padding: 12px 25px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h2>Iris Flower Predictor</h2>
+
+        <form id="predictionForm">
+
+            <input type="number" step="any"
+            id="sepal_length" placeholder="Sepal Length" required>
+
+            <input type="number" step="any"
+            id="sepal_width" placeholder="Sepal Width" required>
+
+            <input type="number" step="any"
+            id="petal_length" placeholder="Petal Length" required>
+
+            <input type="number" step="any"
+            id="petal_width" placeholder="Petal Width" required>
+
+            <button type="submit">Predict Flower</button>
+
+        </form>
+
+        <div id="result"></div>
+
+    </div>
+
+
+    <script>
+
+        document.getElementById("predictionForm")
+        .addEventListener("submit", async function(event) {
+
+            event.preventDefault();
+
+            const data = {
+
+                sepal_length:
+                Number(document.getElementById("sepal_length").value),
+
+                sepal_width:
+                Number(document.getElementById("sepal_width").value),
+
+                petal_length:
+                Number(document.getElementById("petal_length").value),
+
+                petal_width:
+                Number(document.getElementById("petal_width").value)
+
+            };
+
+            const resultElement = document.getElementById("result");
+
+            resultElement.innerText = "Predicting...";
+
+            try {
+
+                const response = await fetch("/api/predict", {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify(data)
+
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || "Prediction failed");
+                }
+
+                resultElement.innerText =
+                "Predicted Flower: " + result.prediction;
+
+            }
+
+            catch(error) {
+
+                resultElement.innerText = "Error: " + error.message;
+
+            }
+
+        });
+
+    </script>
+
+</body>
+
+</html>
