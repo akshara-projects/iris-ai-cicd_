@@ -37,19 +37,23 @@ pipeline {
         }
 
         stage('Deploy') {
-            steps {
-                echo 'Loading Docker images into Minikube'
-                // Ensures minikube commands use the correct home directory context
-                sh '''
-                    minikube image load iris-backend:1.0
-                    minikube image load iris-frontend:1.0
-                '''
-                
-                echo 'Deploying application to Kubernetes'
-                // Bypasses local OpenAPI validation checks to prevent connection failure loops
-                sh 'kubectl apply -f k8s/deployment.yaml --validate=false'
-            }
+    steps {
+        echo 'Loading Docker images into Minikube'
+
+        sh '''
+            minikube image load iris-backend:1.0
+            minikube image load iris-frontend:1.0
+        '''
+
+        echo 'Deploying application to Kubernetes'
+
+        sh '''
+            export KUBECONFIG=/var/lib/jenkins/.kube/config
+
+            kubectl apply -f k8s/deployment.yaml
+        '''
         }
+      }
     }
 
     post {
